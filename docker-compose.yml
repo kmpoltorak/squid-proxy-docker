@@ -1,0 +1,12 @@
+version: "1"
+
+services:
+  squid:
+    container_name: squid
+    build:
+      context: squid
+    ports:
+      - "3128:3128"
+    volumes:
+      - './var-spool-squid:/var/spool/squid'
+    restart: unless-stopped
