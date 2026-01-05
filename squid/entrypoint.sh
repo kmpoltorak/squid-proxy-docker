@@ -1,15 +1,21 @@
 #!/bin/bash
-# Exit immediately if a command exits with a non-zero status
-set -e
+set -euo pipefail
 
-# Setup proper DNS server in squid.conf file
-grep -q 'dns_nameservers' '/etc/squid/squid.conf' || echo dns_nameservers $(cat /etc/resolv.conf | grep nameserver | cut -d " " -f2) >> /etc/squid/squid.conf
+# Ensure spool directory exists and has correct ownership
+mkdir -p /var/spool/squid
+chown -R proxy:proxy /var/spool/squid
 
-# Set proper ownership of directory for cashing
-chown proxy:proxy /var/spool/squid
+# If squid.conf exists, append dns_nameservers from /etc/resolv.conf when missing
+if [ -f /etc/squid/squid.conf ]; then
+	if ! grep -q '^dns_nameservers' /etc/squid/squid.conf; then
+		names=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf | xargs)
+		if [ -n "${names}" ]; then
+			echo "dns_nameservers ${names}" >> /etc/squid/squid.conf
+		fi
+	fi
+fi
 
-# Create swap directories, wait, start squid as non-daemon and set debug level 1
-squid -z; sleep 20; squid -N -d 1 
-
-# Tail Squid logs to keep the container running
-tail -f /var/log/squid/access.log /var/log/squid/cache.log
+# Initialize cache directories and start squid in foreground (so container receives signals)
+squid -z
+sleep 2
+exec squid -N -d 1
