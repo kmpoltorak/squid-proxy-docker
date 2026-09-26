@@ -1,23 +1,20 @@
-FROM ubuntu:latest
+FROM ubuntu:24.04
 
-# Setup proper timezone
 ENV TZ="Europe/Warsaw"
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Install packages (non-interactive), clean apt cache
+# hadolint ignore=DL3008
 RUN apt-get update \
-	&& DEBIAN_FRONTEND=noninteractive apt-get install -yq squid tzdata \
+	&& DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends squid tzdata \
+	&& ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezone \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Copy and install entrypoint
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Copy Squid personalized configuration file
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY config/squid.conf /etc/squid/squid.conf
 
-# Expose Squid TCP port
 EXPOSE 3128/tcp
 
-# Start Squid proxy via entrypoint
+# Signal 0 to the running Squid master process (via its PID file)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+	CMD ["squid", "-k", "check"]
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
