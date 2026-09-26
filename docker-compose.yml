@@ -3,9 +3,22 @@ services:
     container_name: squid
     build:
       context: ./squid
+    image: squid-proxy:local
     ports:
-      - "3128:3128"
+      - "${SQUID_PORT:-3128}:3128"
+    environment:
+      # Set both (e.g. in .env) to require basic auth; leave empty to disable
+      SQUID_USER: ${SQUID_USER:-}
+      SQUID_PASSWORD: ${SQUID_PASSWORD:-}
     volumes:
+      # Mounted read-only: edit on host, then `make reload` (no rebuild needed)
+      - './squid/config/squid.conf:/etc/squid/squid.conf:ro'
       - './var-spool-squid:/var/spool/squid'
       - './var-logs-squid:/var/log/squid'
+    # Cap container stdout logs (files in ./var-logs-squid are rotated by Squid)
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     restart: unless-stopped
