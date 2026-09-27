@@ -11,3 +11,5 @@ there were no review comments. "why" is left as `not recorded` where the PR does
 2026-09-26 · PR #2 · CI wait-for-port loop, switch to DinD if flaky (PR #1) · compose `--wait` on the healthcheck; CI runs `make test` with a cleanup trap; no DinD · CI should not duplicate `make test`
 2026-09-26 · PR #2 · "harden Squid ACLs based on the intended deployment" (PR #1 follow-up) · deny `to_localhost` and `to_linklocal`; document that Docker host/gateway addresses are not covered · not recorded
 2026-09-26 · PR #3 · Dependabot: `ubuntu` 24.04 → 26.04 (Squid 6 → 7) · merged on green CI · not recorded
+2026-09-27 · PR #5 · leave Spec / review decisions / known gaps in README as `TODO(owner)` · fill them from PRs #1–#4 and log the reconstructed decisions here · not recorded
+2026-09-27 · PR #5 · no `CHANGELOG.md` because no releases are published · keep `CHANGELOG.md` per PR, reconstructed from PR history · not recorded
