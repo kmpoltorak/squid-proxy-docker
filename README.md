@@ -6,9 +6,10 @@ A [Squid](https://www.squid-cache.org/) caching forward proxy in Docker (Ubuntu 
 
 ## Problem
 
-Clients on private networks need a shared HTTP/HTTPS forward proxy that can be deployed with
-Docker Compose. It should cache HTTP traffic on disk across restarts and keep request logs that are
-easy to reach for troubleshooting and security auditing.
+A stock Squid image starts in one command, but before it can be shared on a private network it still
+needs its ACLs, credentials, cache and log mounts and log rotation written for that deployment. This repo
+is that setup written once and tested: private-network ACLs, optional auth from environment variables, a
+persistent HTTP cache, and access logs on the host for troubleshooting and security auditing.
 
 ## Why not ubuntu/squid or Tinyproxy?
 
@@ -165,14 +166,19 @@ proxy. The script runs on macOS Bash 3.2. Lint blocks CI, config changes pass `s
 no secrets in the repo.
 
 **What I changed or rejected in review:** (from [docs/review-log.md](docs/review-log.md))
-- Made lint blocking with pinned tool versions, instead of running it as warnings with `|| true`
-  ([#1](https://github.com/kmpoltorak/squid-proxy-docker/pull/1) → [#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
-- Rejected a single `curl -f` as the test: a TLS error or `500` after `CONNECT 200` still passed. Now the
-  script checks exit code + `2xx`, the deny rules and auth, and cannot bypass the proxy ([#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
-- Replaced the CI wait-for-port loop (and the proposed DinD fallback) with the healthcheck and
-  `make test`, so CI and local runs are the same ([#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
-- Denied the container's loopback and link-local targets, and documented that Docker host addresses
-  need a drop-in ([#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
+- Had the Spec, review and known-gaps sections filled from PR history instead of left as placeholders,
+  and kept a `CHANGELOG.md` although nothing is released ([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
+
+**What changed between the first and second version:** the assistant revised its own first version
+([#1](https://github.com/kmpoltorak/squid-proxy-docker/pull/1)) in
+[#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2); these were not review decisions.
+- Lint went from warnings (`|| true`, `hadolint:latest`) to blocking, with pinned tool versions.
+- The test went from a single `curl -f` to checking exit code + `2xx`, the deny rules and auth, without a
+  way to bypass the proxy. A TLS error or `500` after `CONNECT 200` passed the old test.
+- The CI wait-for-port loop (and the proposed DinD fallback) became the healthcheck plus `make test`, so CI
+  and local runs are the same.
+- The container's loopback and link-local targets are denied, and the README says Docker host addresses
+  need a drop-in.
 
 **What the tests are there to catch:** each deny rule or auth check was removed on purpose and the test
 below failed, then it was restored.
@@ -182,6 +188,12 @@ below failed, then it was restored.
 - `CONNECT` to non-SSL port allowed → `expect_code 403 https://example.com:80/` (got `200`), sabotage-checked
 - auth not enforced → `expect_code 407 http://example.com/` (got `200`), sabotage-checked
 - proxy unreachable → `expect_ok` fails with curl exit 7, sabotage-checked
+
+The sabotage checks found one test that could not fail. The `Safe_ports` check used to send `CONNECT` to
+port 25, but `CONNECT !SSL_ports` blocks that request before `Safe_ports` is evaluated, so removing
+`http_access deny !Safe_ports` left every test green. The check now sends a plain `GET` to port 25, which only
+`Safe_ports` denies, and removing the rule makes it fail
+([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
 
 **What I don't trust yet / known gaps:**
 - the wrong-password check was not sabotage-checked on its own (the missing-credentials check fails first)
