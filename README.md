@@ -167,11 +167,14 @@ no secrets in the repo.
 
 **What I changed or rejected in review:** (from [docs/review-log.md](docs/review-log.md))
 - Had the Spec, review and known-gaps sections filled from PR history instead of left as placeholders,
-  and kept a `CHANGELOG.md` although nothing is released ([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
+  because PRs #1–#4 refreshed and improved the project and are its record
+  ([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
+- Kept a `CHANGELOG.md` although nothing is released, so it is clear what was done over time
+  ([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
 
-**What changed between the first and second version:** the assistant revised its own first version
-([#1](https://github.com/kmpoltorak/squid-proxy-docker/pull/1)) in
-[#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2); these were not review decisions.
+**What changed between the first and second version:** PRs #1 and #2 refreshed and improved the
+project. The assistant revised its own first version ([#1](https://github.com/kmpoltorak/squid-proxy-docker/pull/1))
+in [#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2); these were not review decisions.
 - Lint went from warnings (`|| true`, `hadolint:latest`) to blocking, with pinned tool versions.
 - The test went from a single `curl -f` to checking exit code + `2xx`, the deny rules and auth, without a
   way to bypass the proxy. A TLS error or `500` after `CONNECT 200` passed the old test.
