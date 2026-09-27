@@ -35,7 +35,8 @@ tested where it matters, and honestly documented.
   unit tests; `make test` is the integration test, needs Docker and internet access
   (`example.com`), and recreates the container named `squid`.
 - **Hard rules:** never add `http_access allow all`; every new ACL or feature gets a check
-  in `scripts/test-proxy.sh`; config changes pass `squid -k parse`.
+  in `scripts/test-proxy.sh`; config changes pass `squid -k parse`; never add `|| true` to
+  lint steps. Commits use conventional prefixes (`feat:`, `fix:`, `docs:`, `ci:`).
 - **Releases:** none published yet. `CHANGELOG.md` is still kept per PR (add to `Unreleased`).
 
 ## Workflow
