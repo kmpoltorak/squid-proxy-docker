@@ -58,7 +58,7 @@ expect_ok "https://example.com/"
 echo "Blocked targets:"
 expect_code 403 "http://127.0.0.1:3128/" ${auth[@]+"${auth[@]}"}    # proxy's own loopback
 expect_code 403 "http://169.254.169.254/" ${auth[@]+"${auth[@]}"}   # cloud metadata
-expect_code 403 "https://example.com:25/" ${auth[@]+"${auth[@]}"}   # port not in Safe_ports
+expect_code 403 "http://example.com:25/" ${auth[@]+"${auth[@]}"}    # port not in Safe_ports (plain GET, not CONNECT)
 expect_code 403 "https://example.com:80/" ${auth[@]+"${auth[@]}"}   # CONNECT to non-SSL port
 
 if [ -n "${PROXY_USER}" ]; then

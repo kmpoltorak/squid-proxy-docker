@@ -2,23 +2,34 @@
 
 [![CI](https://github.com/kmpoltorak/squid-proxy-docker/actions/workflows/ci.yml/badge.svg)](https://github.com/kmpoltorak/squid-proxy-docker/actions/workflows/ci.yml)
 
-Lightweight Docker setup for a [Squid](https://www.squid-cache.org/) caching forward proxy (Ubuntu 24.04, Squid 6).
+A [Squid](https://www.squid-cache.org/) caching forward proxy in Docker (Ubuntu 26.04, distro Squid), restricted to private-network clients.
 
-## Features
+## Problem
 
-- HTTP and HTTPS (`CONNECT`) forward proxy with a 10 GB disk cache
-- Access limited to private networks (RFC 1918, CGN, link-local, IPv6 ULA)
-- Blocks the Squid container's own loopback and link-local targets (e.g. cloud metadata `169.254.169.254`)
-- Optional basic authentication via environment variables
-- Access log to `docker compose logs` and to a file on the host, rotated daily
-- Persistent cache, config mounted read-only and hot-reloadable
-- Docker healthcheck, CI with hadolint, shellcheck and a functional test
+Clients on private networks need a shared HTTP/HTTPS forward proxy that can be deployed with
+Docker Compose. It should cache HTTP traffic on disk across restarts and keep request logs that are
+easy to reach for troubleshooting and security auditing.
 
-Requirements: Docker with Compose v2 (`--wait`), GNU make, curl and Bash 3.2+ for the tests.
+## Why not ubuntu/squid or Tinyproxy?
+
+[ubuntu/squid](https://hub.docker.com/r/ubuntu/squid) runs the same Squid and can do everything this
+repo does with your own `squid.conf` and Compose wiring. [Tinyproxy](https://tinyproxy.github.io/)
+handles HTTP/HTTPS forwarding, client ACLs and basic auth with less overhead, but has no disk cache.
+
+What this repo makes the default in one Compose setup:
+
+- access limited to private source networks (RFC 1918, CGN, link-local, IPv6 ULA)
+- the container's own loopback and link-local targets (e.g. cloud metadata `169.254.169.254`) are denied
+- optional basic auth from two environment variables
+- access log both to `docker compose logs` and to a file on the host, rotated daily
+- persistent 10 GB disk cache, config mounted read-only and reloadable without rebuild
 
 ## Quick start
 
+Requirements: Docker with Compose v2 (`--wait`), GNU make, curl and Bash 3.2+ for the tests.
+
 ```sh
+cp .env.example .env
 make up          # build, start and wait until healthy
 make test        # start, run functional tests, tear down
 make help        # list all targets
@@ -44,9 +55,6 @@ export http_proxy=http://<docker-host>:3128 https_proxy=http://<docker-host>:312
 | Extra config snippets | mount single `*.conf` files into `/etc/squid/conf.d/` (not the whole directory, the entrypoint writes `auth.conf` there) |
 
 `make reload` validates the config (`squid -k parse`) before applying it.
-Start from the template: `cp .env.example .env`.
-
-The healthcheck (`squid -k check`) only confirms the Squid process is running, not that traffic passes through it.
 
 ### Blocked targets
 
@@ -56,34 +64,30 @@ routing and firewall. To block them, mount a drop-in (snippets are applied befor
 
 ```
 # /etc/squid/conf.d/block-host.conf
-acl docker_host dst 192.168.1.10 172.17.0.1
+acl docker_host dst 192.0.2.10 172.17.0.1
 http_access deny docker_host
 ```
 
 ### Authentication
 
 With `SQUID_USER` and `SQUID_PASSWORD` set, clients need **both** a private IP and valid credentials
-(unauthenticated requests get `407`). Apply changes with `make up` (the container is recreated):
+(unauthenticated requests get `407`). Setting only one of them makes the container exit at start.
+Apply changes with `make up` (the container is recreated):
 
 ```sh
 curl -x http://alice:secret@<docker-host>:3128 https://example.com
 ```
 
-The password is hashed (SHA-512 crypt) inside the container, but the plain value is visible in
-`docker inspect`. Basic auth sends credentials unencrypted to the proxy, so use it only on trusted networks.
-
 > **Security:** only clients from private address ranges are allowed. Do not expose port 3128 to the internet.
 > If your clients show up with a public IP in `access.log` (`TCP_DENIED/403`), for example because of
 > Docker Desktop networking or a VPN, add a dedicated `acl ... src` rule instead of widening `localnet`.
 
-## Cache and logs
+### Cache and logs
 
 | Host path | Container path | Content |
 |-----------|----------------|---------|
 | `./var-spool-squid` | `/var/spool/squid` | disk cache |
 | `./var-logs-squid` | `/var/log/squid` | `access.log`, `cache.log` |
-
-The access log is written both to the file and to container stdout:
 
 ```sh
 make logs                          # docker compose logs -f squid
@@ -95,34 +99,96 @@ To clear the cache: `make down && rm -rf var-spool-squid && make up`.
 Log files are rotated daily by the container (`squid -k rotate`, 7 old files kept as `access.log.0`…`.6`);
 `make rotate` rotates on demand. Container stdout logs are capped by Compose (`json-file`, 3 × 10 MB).
 
-## Testing
-
-[scripts/test-proxy.sh](scripts/test-proxy.sh) exits non-zero on the first failed check:
-
-- HTTP and HTTPS requests go through: curl exits cleanly and the target returns `2xx`
-- the container loopback, `169.254.169.254`, ports outside `Safe_ports` and `CONNECT` to non-SSL ports are blocked (`403`)
-- with `PROXY_USER`/`PROXY_PASSWORD` set: missing and wrong credentials are rejected (`407`)
-
-The script ignores `NO_PROXY` and `~/.curlrc`, so every request goes through the proxy under test.
-
-`make test` runs it twice, without and with auth (`test`/`test`), then tears down, also after a failed start
-or Ctrl-C, printing container logs on failure. It ignores `SQUID_*` from `.env` and always publishes port
-`3128` (override with `make test TEST_PORT=13128`). Note that it recreates the `squid` container, so a running
-proxy is stopped. CI runs `make test`. Against a running proxy:
-
-```sh
-PROXY_URL=http://10.0.0.5:3128 PROXY_USER=alice PROXY_PASSWORD=secret ./scripts/test-proxy.sh
-```
-
-`make lint` runs hadolint and shellcheck in Docker, so nothing needs to be installed locally.
-
-## Squid documentation
+### Squid documentation
 
 - Documentation & wiki: https://wiki.squid-cache.org/
 - Configuration directives: https://www.squid-cache.org/Doc/config/
-- Configuration examples: https://wiki.squid-cache.org/ConfigExamples
 - ACLs and access controls: https://wiki.squid-cache.org/Features/ACLs
-- Security: https://wiki.squid-cache.org/SquidFaq/Security
+
+## Limitations
+
+- No TLS interception: HTTPS is tunnelled with `CONNECT`, so HTTPS responses are not cached.
+- The Docker host's LAN address and bridge gateway are reachable unless you add a drop-in (see above).
+- The healthcheck (`squid -k check`) only confirms the Squid process is running, not that traffic passes.
+- Basic auth sends credentials unencrypted to the proxy. The password is hashed (SHA-512 crypt) inside the
+  container, but the plain value is visible in `docker inspect`. One user only.
+- `SQUID_USER` is written to the password file as-is; a `:` or newline in it breaks authentication.
+- The tests need internet access (`example.com`); there are no offline tests.
+
+## Testing
+
+```sh
+make lint   # hadolint + shellcheck, run in Docker
+make test   # build, run scripts/test-proxy.sh without and with auth (test/test), tear down
+```
+
+`make test` ignores `SQUID_*` from `.env`, always publishes port `3128` (override with
+`make test TEST_PORT=13128`), tears down also after a failed start or Ctrl-C, and prints container logs on
+failure. It recreates the `squid` container, so a running proxy is stopped. CI runs both targets.
+
+Against a running proxy:
+
+```sh
+PROXY_URL=http://192.0.2.5:3128 PROXY_USER=alice PROXY_PASSWORD=secret ./scripts/test-proxy.sh
+```
+
+[scripts/test-proxy.sh](scripts/test-proxy.sh) exits non-zero on the first failed check. It ignores
+`NO_PROXY` and `~/.curlrc`, so every request goes through the proxy under test.
+
+| Failure mode | Tests (in `scripts/test-proxy.sh`) |
+|--------------|-------|
+| Proxy up but not forwarding HTTP / HTTPS | `expect_ok http://example.com/`, `expect_ok https://example.com/` |
+| Client reaches the Squid container's own loopback | `expect_code 403 http://127.0.0.1:3128/` |
+| Client reaches cloud metadata / link-local | `expect_code 403 http://169.254.169.254/` |
+| Request to a port outside `Safe_ports` | `expect_code 403 http://example.com:25/` |
+| `CONNECT` tunnel to a non-SSL port | `expect_code 403 https://example.com:80/` |
+| Auth enabled, request without credentials accepted | `expect_code 407 http://example.com/` |
+| Auth enabled, wrong password accepted | `expect_code 407 ... --proxy-user test:wrong-test` |
+| Client from a public IP allowed | not tested (the test client is always on a private network) |
+| Only one of `SQUID_USER`/`SQUID_PASSWORD` set | not tested (entrypoint exits 1) |
+| Invalid config applied by `make reload` | not tested (`squid -k parse` runs first) |
+| Access log not written to the host file or to container stdout | not tested (`access_log` lines in `squid.conf`) |
+| Log rotation stops | not tested (loop in `entrypoint.sh`) |
+| Disk cache lost when the container is recreated | not tested (bind mount in `docker-compose.yml`) |
+| Container fails to restart because of a stale PID file | not tested (`rm -f /run/squid.pid` in `entrypoint.sh`) |
+| `make test` leaves the container running after a failure | not tested (`trap` in `Makefile`) |
+
+## How this was built
+
+Built with an AI coding assistant. I wrote the problem statement and spec, reviewed
+every PR, and designed the checks below.
+
+**Spec:** Access policy stays restrictive: private source networks only, never `http_access allow all`.
+Every ACL or feature gets a check in `scripts/test-proxy.sh`. The tests must not pass on a false positive:
+curl must exit cleanly, the target must return `2xx`, and `NO_PROXY` or `~/.curlrc` must not route around the
+proxy. The script runs on macOS Bash 3.2. Lint blocks CI, config changes pass `squid -k parse`, and there are
+no secrets in the repo.
+
+**What I changed or rejected in review:** (from [docs/review-log.md](docs/review-log.md))
+- Made lint blocking with pinned tool versions, instead of running it as warnings with `|| true`
+  ([#1](https://github.com/kmpoltorak/squid-proxy-docker/pull/1) → [#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
+- Rejected a single `curl -f` as the test: a TLS error or `500` after `CONNECT 200` still passed. Now the
+  script checks exit code + `2xx`, the deny rules and auth, and cannot bypass the proxy ([#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
+- Replaced the CI wait-for-port loop (and the proposed DinD fallback) with the healthcheck and
+  `make test`, so CI and local runs are the same ([#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
+- Denied the container's loopback and link-local targets, and documented that Docker host addresses
+  need a drop-in ([#2](https://github.com/kmpoltorak/squid-proxy-docker/pull/2)).
+
+**What the tests are there to catch:** each deny rule or auth check was removed on purpose and the test
+below failed, then it was restored.
+- loopback target allowed → `expect_code 403 http://127.0.0.1:3128/` (got `400`), sabotage-checked
+- link-local / metadata target allowed → `expect_code 403 http://169.254.169.254/` (got `503`), sabotage-checked
+- `Safe_ports` not enforced → `expect_code 403 http://example.com:25/`, sabotage-checked
+- `CONNECT` to non-SSL port allowed → `expect_code 403 https://example.com:80/` (got `200`), sabotage-checked
+- auth not enforced → `expect_code 407 http://example.com/` (got `200`), sabotage-checked
+- proxy unreachable → `expect_ok` fails with curl exit 7, sabotage-checked
+
+**What I don't trust yet / known gaps:**
+- the wrong-password check was not sabotage-checked on its own (the missing-credentials check fails first)
+- the rows marked "not tested" in the table above
+- the tests depend on `example.com` and the runner's internet access, so an outage there fails CI
+- the Ubuntu 26.04 / Squid 7 bump ([#3](https://github.com/kmpoltorak/squid-proxy-docker/pull/3)) was merged on
+  green CI only; the sabotage checks above were run on Squid 7.2 afterwards
 
 ## License
 
