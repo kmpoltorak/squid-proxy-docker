@@ -109,6 +109,8 @@ Log files are rotated daily by the container (`squid -k rotate`, 7 old files kep
 ## Limitations
 
 - No TLS interception: HTTPS is tunnelled with `CONNECT`, so HTTPS responses are not cached.
+- No domain or content blocklist. To experiment, add a drop-in like the one in "Blocked targets" with
+  `acl blocked dstdomain .example.net` and `http_access deny blocked`.
 - The Docker host's LAN address and bridge gateway are reachable unless you add a drop-in (see above).
 - The healthcheck (`squid -k check`) only confirms the Squid process is running, not that traffic passes.
 - Basic auth sends credentials unencrypted to the proxy. The password is hashed (SHA-512 crypt) inside the
