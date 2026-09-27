@@ -6,10 +6,10 @@ A [Squid](https://www.squid-cache.org/) caching forward proxy in Docker (Ubuntu 
 
 ## Problem
 
-A stock Squid image starts in one command, but before it can be shared on a private network it still
-needs its ACLs, credentials, cache and log mounts and log rotation written for that deployment. This repo
-is that setup written once and tested: private-network ACLs, optional auth from environment variables, a
-persistent HTTP cache, and access logs on the host for troubleshooting and security auditing.
+I built this to learn three things hands-on: how a forward proxy works, how to block unwanted traffic
+with Squid ACLs, and how caching speeds up page loads. The repo is the lab: private-network ACLs, deny
+rules checked by tests, a persistent HTTP cache and access logs on the host to see what happened.
+Caching only helps plain HTTP; HTTPS goes through a `CONNECT` tunnel and is not cached (see Limitations).
 
 ## Why not ubuntu/squid or Tinyproxy?
 
