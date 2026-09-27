@@ -14,8 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Documentation examples use RFC 5737 addresses.
 
 ### Fixed
-- The `Safe_ports` check tested `CONNECT` to port 25, which `CONNECT !SSL_ports` already blocks,
-  so removing `deny !Safe_ports` went unnoticed. It now sends a plain `GET` to port 25.
+- The `Safe_ports` test could not fail; see "How this was built" in the README.
 
 ## 2026-09-26
 
