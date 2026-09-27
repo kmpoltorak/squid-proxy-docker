@@ -8,8 +8,8 @@ tested where it matters, and honestly documented.
 ## This project
 
 - **Problem:** a learning project: how a forward proxy works, the security side of blocking
-  unwanted traffic with ACLs, and speeding up page loads by caching. It is a lab setup,
-  not a hardened production proxy.
+  unwanted traffic with ACLs, and speeding up page loads by caching. Now shared as a lab
+  for others learning the same; not a hardened production proxy.
 - **Existing tools and why they don't fit:** [Ubuntu's Squid image](https://hub.docker.com/r/ubuntu/squid)
   can support the same proxy behavior with custom configuration and deployment wiring.
   This repo packages private-network ACLs, optional environment-based authentication,

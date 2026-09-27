@@ -7,8 +7,8 @@ A [Squid](https://www.squid-cache.org/) caching forward proxy in Docker (Ubuntu 
 ## Problem
 
 I built this to learn three things hands-on: how a forward proxy works, how to block unwanted traffic
-with Squid ACLs, and how caching speeds up page loads. The repo is the lab: private-network ACLs, deny
-rules checked by tests, a persistent HTTP cache and access logs on the host to see what happened.
+with Squid ACLs, and how caching speeds up page loads. The repo is that lab, shared for anyone learning the
+same: private-network ACLs, deny rules checked by tests, a persistent HTTP cache and access logs on the host.
 Caching only helps plain HTTP; HTTPS goes through a `CONNECT` tunnel and is not cached (see Limitations).
 
 ## Why not ubuntu/squid or Tinyproxy?
