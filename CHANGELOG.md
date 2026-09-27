@@ -8,6 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - `CLAUDE.md` with the project rules, `docs/review-log.md`, this changelog.
 
+### Removed
+- `.github/copilot-instructions.md`; its rules are in `CLAUDE.md`.
+
 ### Changed
 - README reorganised: problem, comparison with ubuntu/squid and Tinyproxy, limitations,
   failure-mode test table, "How this was built".
