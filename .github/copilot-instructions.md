@@ -4,7 +4,7 @@ Docker setup for a Squid forward proxy.
 
 ## Layout
 
-- `squid/Dockerfile` — image based on `ubuntu:24.04`, with healthcheck `squid -k check`.
+- `squid/Dockerfile` — image based on `ubuntu:26.04`, with healthcheck `squid -k check`.
 - `squid/entrypoint.sh` — fixes volume/stdout ownership, enables basic auth when `SQUID_USER`/`SQUID_PASSWORD` are set, removes a stale PID file, validates config, starts a daily `squid -k rotate` loop, runs Squid in the foreground.
 - `squid/config/squid.conf` — ACLs and cache settings; mounted read-only by compose, applied with `make reload`.
 - `docker-compose.yml` — `squid` service, host port `${SQUID_PORT:-3128}`, cache/log bind mounts.
