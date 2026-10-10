@@ -167,12 +167,12 @@ curl must exit cleanly, the target must return `2xx`, and `NO_PROXY` or `~/.curl
 proxy. The script runs on macOS Bash 3.2. Lint blocks CI, config changes pass `squid -k parse`, and there are
 no secrets in the repo.
 
-**What I changed or rejected in review:** (from [docs/review-log.md](docs/review-log.md))
+**What I changed or rejected in review:**
 - Had the Spec, review and known-gaps sections filled from PR history instead of left as placeholders,
   because PRs #1–#4 refreshed and improved the project and are its record
   ([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
-- Kept a `CHANGELOG.md` although nothing is released, so it is clear what was done over time
-  ([#5](https://github.com/kmpoltorak/squid-proxy-docker/pull/5)).
+- Rejected an example `dstdomain` blocklist drop-in with a `403` test: blocklists stay out of scope, whoever
+  uses the lab can add their own ([#8](https://github.com/kmpoltorak/squid-proxy-docker/pull/8)).
 
 **What changed between the first and second version:** PRs #1 and #2 refreshed and improved the
 project. The assistant revised its own first version ([#1](https://github.com/kmpoltorak/squid-proxy-docker/pull/1))
